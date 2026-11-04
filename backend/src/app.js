@@ -3,6 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const pinoHttp = require("pino-http");
 const multer = require("multer");
+const swaggerUi = require("swagger-ui-express");
+const openapiSpecification = require("./docs/openapi");
 
 const fileRoutes = require("./routes/fileRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -37,6 +39,12 @@ app.get("/health", (req, res) => {
 // Versioned API routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/files", fileRoutes);
+// Swagger API documentation
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(openapiSpecification)
+);
 
 // Centralized 404 handler
 app.use((req, res) => {
