@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: securecloud-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: securecloud
+      POSTGRES_USER: securecloud_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securecloud_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U securecloud_user -d securecloud"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:8
+    container_name: securecloud-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: securecloud-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      FRONTEND_URL: http://localhost:5173
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: securecloud
+      POSTGRES_USER: securecloud_user
+      MONGODB_URI: mongodb://mongodb:27017/securecloud
+      STORAGE_ROOT: /app/SecureCloud_Storage
+    ports:
+      - "5001:5000"
+    volumes:
+    - ./backend/SecureCloud_Storage:/app/SecureCloud_Storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  mongodb_data:
